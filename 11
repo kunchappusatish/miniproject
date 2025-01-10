@@ -1,0 +1,356 @@
+1.fork(), execlp() & wait()+++++++++++++
+
+#include<stdio.h>
+#include<stdlib.h>
+#include<unistd.h>
+void main(intargc,char *arg[])
+{
+int pid;
+pid=fork();
+if(pid<0)
+
+{
+printf("fork failed");
+exit(1);
+}
+else if(pid==0)
+{
+execlp("date","ls",NULL );
+exit(0);
+}
+else
+{
+printf("\n Process id is -%d\n",getpid());
+wait(NULL);
+exit(0);
+}
+}
+---------------------------------------------
+2.calls getpid () & getppid ()++++++++++++
+
+#include <stdio.h>
+#include <sys/types.h>
+#include <unistd.h>
+void main()
+{
+int pid;
+pid=fork();
+
+if(!pid)
+{
+printf("Child process...");
+printf("\n\nChild PID : %d",getpid());
+printf("\nParent PID : %d",getppid());
+printf("\n\nFinished with child\n");
+}
+else
+{
+wait(NULL);
+printf("\nParent process");
+printf("\nPARENT PID : %d",getpid());
+printf("\nChild PID : %d",pid);
+}
+}
+---------------------------------------------------------------------
+3.one file to another file++++++++++++
+#include<stdio.h>
+#include<unistd.h>
+#include<sys/types.h>
+#include<string.h>
+#include <fcntl.h>
+void main()
+{
+char buff;
+int fd,fd1;
+fd=open("one.txt",O_RDONLY);
+fd1=open("two.txt",O_WRONLY|O_CREAT);
+while(read(fd,&buff,1))
+write(fd1,&buff,1);
+printf("The copy of a file is successed");
+close(fd);
+close(fd1);
+}
+-----------------------------------------------------------------------
+4.pthreads+++++++++++++++++
+
+#include <pthread.h>
+#include <stdio.h>
+#include <stdlib.h>
+#define NUM_THREADS 5
+void *PrintHello(void *threadid)
+{
+long tid;
+tid = (long)threadid;
+printf("Hello World! It's me, thread #%ld!\n", tid);
+pthread_exit(NULL);
+}
+int main(int argc, char *argv[])
+{
+pthread_t threads[NUM_THREADS];
+int rc;
+long t;
+for(t=0;t<NUM_THREADS;t++){
+printf("In main: creating thread %ld\n", t);
+rc = pthread_create(&threads[t], NULL, PrintHello, (void *)t);
+if (rc){
+printf("ERROR; return code from pthread_create() is %d\n", rc);
+exit(-1);
+}
+}
+/* Last thing that main() should do */
+pthread_exit(NULL);
+}
+____________________________________________________
+5.Round Robin+++++++++++
+#include<stdio.h>
+int main()
+{
+int i,tbt=0,nop,ts=0,flag[20],rem[20];
+int from,wt[20],tt[20],b[20],twt=0,ttt=0;
+int dur;
+float awt,att;
+printf("Enter no.of Processes:");
+scanf("%d",&nop);
+printf("Enter the time slice:");
+scanf("%d",&ts);
+printf("Enter the Burst times..\n");
+for(i=0;i<nop;i++)
+{
+wt[i]=tt[i]=0;
+printf("P%d\t:",i+1);
+scanf("%d",&b[i]); // Reading Burst Time
+rem[i]=b[i]; // Store the Burst Time in rem array
+
+tbt+=b[i]; // Total Burst Time
+flag[i]=0; // used to check whether the process has remaining burst time or not
+}
+from=0;
+i=0;
+printf("\n\tGantt Chart");
+printf("\nProcessID \t From Time\tTo Time\n");
+while(from<tbt)
+{
+if(!flag[i]) //true only when process has burst time
+{
+if(rem[i]<=ts) //burst time should be equal or less than time slice
+{
+dur=rem[i];
+flag[i]=1; // make the value false
+tt[i]=dur+from;
+wt[i]=tt[i]-b[i]; // subtract
+}
+else
+dur=ts;
+printf("%7d%15d%15d\n",i+1,from,from+dur);
+rem[i]= rem[i]-dur;
+from = from+dur;
+}
+i=(i+1)%nop;
+}
+for(i=0;i<nop;i++)
+{
+twt+=wt[i];
+ttt+=tt[i];
+}
+printf("\n\nProcess ID\tWaiting Time\tTurn Around Time");
+for(i=0;i<nop;i++)
+{
+printf("\n\t%d\t\t%d\t\t%d",i+1,wt[i],tt[i]);
+}
+awt=(float)twt/(float)nop;
+att=(float)ttt/(float)nop;
+printf("\nTotal Waiting Time:%d",twt);
+printf("\nTotal TurnAround Time:%d",ttt);
+printf("\nAverage Waiting Time:%.2f",awt);
+printf("\nAverage Turn Around Time:%.2f\n",att);
+return 0;
+}
+_____________________________________________________
+6. Semaphore
+
+#include<stdio.h>
+#include<stdlib.h>
+int mutex=1,full=0,empty=3,x=0;
+void producer();
+void consumer();
+int wait(int);
+int signal(int);
+int main()
+{
+int n;
+do
+{
+printf("\n1.producer\n2.consumer\n3.exit\n");
+printf("\nenter ur choice");
+
+scanf("%d",&n);
+switch(n)
+{
+case 1:
+if((mutex==1)&&(empty!=0))
+producer();
+else
+printf("buffer is full\n");
+break;
+case 2:
+if((mutex==1)&&(full!=0))
+consumer();
+else
+printf("buffer is empty");
+break;
+case 3:
+exit(0);
+break;
+}
+}while(n!=3);
+return 0;
+}
+int wait(int s)
+{
+return(--s);
+}
+int signal(int s)
+{
+return(++s);
+}
+void producer()
+{
+mutex=wait(mutex);
+full=signal(full);
+empty=wait(empty);
+x++;
+printf("\nproducer produces the items%d",x);
+mutex=signal(mutex);
+}
+void consumer()
+{
+mutex=wait(mutex);
+full=wait(full);
+empty=signal(empty);
+printf("\nconsumerconsumes the item %d",x);
+x--;
+mutex=signal(mutex);
+}
+________________________________________________
+7.Bankers Algorithm
+#include<stdio.h>
+void main()
+{
+int
+k=0,output[10],d=0,t=0,ins[5],i,avail[5],allocated[10][5],need[10][5],
+MAX[10][5],pno,P[10],j,rz, count=0;
+printf("\n Enter the number of resources : ");
+scanf("%d", &rz);
+printf("\n enter the max instances of each resources\n");
+for(i=0;i<rz;i++)
+{
+avail[i]=0;
+printf("%c= ",(i+97));
+scanf("%d",&ins[i]);
+}
+printf("\n Enter the number of processes : ");
+
+scanf("%d", &pno);
+printf("\n Enter the allocation matrix \n ");
+for(i=0;i<rz;i++)
+printf(" %c",(i+97));
+printf("\n");
+for(i=0;i <pno;i++)
+{
+P[i]=i;
+printf("P[%d] ",P[i]);
+for(j=0;j<rz;j++)
+{
+scanf("%d",&allocated[i][j]);
+avail[j]+=allocated[i][j];
+}
+}
+printf("\nEnter the MAX matrix \n ");
+for(i=0;i<rz;i++)
+{
+printf(" %c",(i+97));
+avail[i]=ins[i]-avail[i];
+}
+
+printf("\n");
+for(i=0;i <pno;i++)
+{
+printf("P[%d] ",i);
+for(j=0;j<rz;j++)
+scanf("%d", &MAX[i][j]);
+}
+printf("\n");
+A: d=-1;
+for(i=0;i <pno;i++)
+{
+count=0; t=P[i];
+for(j=0;j<rz;j++)
+{
+need[t][j] = MAX[t][j]-allocated[t][j];
+if(need[t][j]<=avail[j])
+count++;
+}
+if(count==rz)
+{
+
+output[k++]=P[i];
+for(j=0;j<rz;j++)
+avail[j]+=allocated[t][j];
+}
+else
+P[++d]=P[i];
+}
+if(d!=-1)
+{
+pno=d+1;
+goto A;
+}
+printf("\t <");
+for(i=0;i<k;i++)
+printf(" P[%d] ",output[i]);
+printf(">");
+}
+---------------------------------------------------------------
+8.fifo+++++++++++++++++++++++++
+#include<stdio.h>
+int main()
+{
+int i,j,n,a[50],frame[10],no,k,avail,count=0;
+printf("\n ENTER THE NUMBER OF PAGES:\n");
+scanf("%d",&n);
+printf("\n ENTER THE PAGE NUMBER :\n");
+for(i=1;i<=n;i++)
+scanf("%d",&a[i]);
+printf("\n ENTER THE NUMBER OF FRAMES :");
+scanf("%d",&no);
+for(i=0;i<no;i++)
+{
+frame[i]= -1;
+}
+j=0;
+printf("\tpage number\t page frames\n");
+for(i=1;i<=n;i++)
+{
+printf("%d\t\t",a[i]);
+avail=0;
+for(k=0;k<no;k++)
+
+{
+if(frame[k]==a[i])
+avail=1;
+}
+if (avail==0)
+{
+frame[j]=a[i];
+j=(j+1)%no;
+count++;
+for(k=0;k<no;k++)
+printf("%d\t",frame[k]);
+}
+printf("\n");
+}
+printf("Page Fault Is %d",count);
+return 0;
+}
+--------------------------------------------------------------
+
